@@ -1,0 +1,199 @@
+//whatchlist action
+export const addToWatchlist =(payload) => {
+
+    return {
+        type:"ADD_TO_WATCHLIST",
+        payload
+    }
+}
+
+
+//watch list reducer 
+const initialState = {
+    watchlist: []
+  };
+  
+  const ADD_TO_WATCHLIST = 'ADD_TO_WATCHLIST';
+  
+  export const addToWatchlist = (movie) => ({
+    type: ADD_TO_WATCHLIST,
+    payload: movie
+  });
+  
+  const watchlistReducer = (state = initialState, action) => {
+    switch (action.type) {
+      case ADD_TO_WATCHLIST:
+        return {
+          ...state,
+          watchlist: [...state.watchlist, action.payload]
+        };
+      default:
+        return state;
+    }
+  };
+  
+  export default watchlistReducer;
+  
+
+
+  //combine reducer 
+  import {combineReducers} from 'redux';
+import LangReducer from '../reducers/lang_reducer';
+import ThemeReducer from '../reducers/theme_reducer';
+import WatchlistReducer from '../reducers/Watchlist_reducer';
+
+
+
+export default combineReducers(
+
+    {
+        myLang:LangReducer,
+        myTheme:ThemeReducer,
+        watchlist:WatchlistReducer,
+    }
+)
+
+
+//store file 
+import {createStore} from "redux";
+import { composeWithDevTools } from "redux-devtools-extension";
+import combineReducer from "./reducers/combine_reducer";
+
+
+const MyStore = createStore (combineReducer,composeWithDevTools())
+
+export default MyStore;
+
+
+
+
+//home page 
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import NavBar from '../../components/navbar/navbar';
+import MyCard from '../../components/card/cards';
+import './home.css'
+import { Link,NavLink } from 'react-router-dom';
+import Details from '../../components/details/details';
+import { useDispatch ,useSelector } from 'react-redux';
+const Home = () => {
+  const [Products, setProducts] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get('https://api.themoviedb.org/3/movie/popular?api_key=aceb067a920ac17155823a50c94ed9d5')
+      .then((res) => {
+        setProducts(res.data.results); // Access the 'results' array from the response
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
+
+  const [cart, setCart] = useState([]);
+
+  // const handleAddToCart = (product) => {
+  //   setCart(prevCart => [...prevCart, product]);
+  // };
+  
+  
+// const watchlist =useSelector(state => state.watchlist.watchlist)
+
+// useEffect (()=> {
+//   console.log("Watchlist",watchlist)
+// })
+
+  return (
+    <>
+      {/*strat search div */}
+      <div className='p-3'>
+        <div className="search p-5">
+          <h1 className='py-3'>Welcome to our movie app</h1>
+          <p>Millions of movies, TV shows and people to discover. Explore now.</p>
+          <div className="form d-flex gap-3">
+            <input type="text" placeholder='Search and explore....' className='form-control'/>
+            <button>Search</button>
+          </div>
+        </div>
+      </div>
+      {/*end search div */}  
+
+      <div className='d-flex justify-content-center flex-wrap gap-4 py-5' >
+        {Products.map((Product, index) => (
+          <div key={index}>
+            <NavLink className="text-decoration-none text-black" to='*'>
+            <MyCard
+              name={Product.title} // TMDB uses 'title' for movie names
+              logo={`https://image.tmdb.org/t/p/w500${Product.poster_path}`} // Use 'poster_path' for movie posters
+              url={`/details/${Product.id}`} // Corrected the path name from 'detailes' to 'details'
+              btnName="View Details"
+              width="18rem"
+              // onAddToCart={() => handleAddToCart(Product)}
+              release_date={Product.release_date}  
+                        />
+            </NavLink>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
+export default Home;
+
+
+
+//card component
+
+import React from 'react';
+import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
+import { Link } from 'react-router-dom'; 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
+import { useDispatch, useSelector } from 'react-redux'; 
+import { addToWatchlist, removeFromWatchlist } from '../../store/actions/watchlist'; 
+
+function BasicExample(props) {
+  const dispatch = useDispatch();
+  const watchlist = useSelector((state) => state.watchlist.watchlist);
+
+  // Check if the current movie is in the watchlist
+  const isFavorite = watchlist.some(movie => movie.id === props.id);
+
+  const handleFavoriteToggle = (event) => {
+    event.preventDefault(); // Prevents any default action associated with the click
+    if (isFavorite) {
+      dispatch(removeFromWatchlist(props.id));
+    } else {
+      dispatch(addToWatchlist({
+        id: props.id,
+        name: props.name,
+        logo: props.logo,
+        release_date: props.release_date
+      }));
+    }
+  };
+
+  return (
+    <Card style={{ width: props.width || '18rem' }}>
+      <Card.Img src={props.logo} variant="top" />
+      <Card.Body>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Card.Title>{props.name}</Card.Title>
+          <FontAwesomeIcon 
+            icon={isFavorite ? solidHeart : regularHeart} 
+            style={{ color: isFavorite ? 'red' : 'gray', cursor: 'pointer' }} 
+            onClick={handleFavoriteToggle}
+          />
+        </div>
+        <div>{props.release_date}</div>
+        {props.btnName && <Button as={Link} to={props.url} variant="primary">{props.btnName}</Button>}
+      </Card.Body>
+    </Card>
+  );
+}
+
+export default BasicExample;
+
